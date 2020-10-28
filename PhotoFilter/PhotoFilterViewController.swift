@@ -4,11 +4,11 @@ import CoreImage.CIFilterBuiltins
 import Photos
 
 class PhotoFilterViewController: UIViewController {
-
-	@IBOutlet weak var brightnessSlider: UISlider!
-	@IBOutlet weak var contrastSlider: UISlider!
-	@IBOutlet weak var saturationSlider: UISlider!
-	@IBOutlet weak var imageView: UIImageView!
+    
+    @IBOutlet weak var brightnessSlider: UISlider!
+    @IBOutlet weak var contrastSlider: UISlider!
+    @IBOutlet weak var saturationSlider: UISlider!
+    @IBOutlet weak var imageView: UIImageView!
     
     var originalImage: UIImage? {
         didSet {
@@ -18,7 +18,7 @@ class PhotoFilterViewController: UIViewController {
             }
             
             var scaledSize = imageView.bounds.size
-//            let scale = imageView.contentScaleFactor // UIScreen.main.scale
+            //            let scale = imageView.contentScaleFactor // UIScreen.main.scale
             let scale: CGFloat = 0.5
             
             scaledSize.width *= scale
@@ -41,25 +41,25 @@ class PhotoFilterViewController: UIViewController {
     
     private let context = CIContext()
     private let filter = CIFilter.colorControls()
-	
-	override func viewDidLoad() {
-		super.viewDidLoad()
+    
+    override func viewDidLoad() {
+        super.viewDidLoad()
         
-//        let filter = CIFilter.gaussianBlur()
-//        let filter2 = CIFilter(name: "CIColorControls")
-//
-//        print(filter.attributes) // print the attributes to see what they can do.
+        //        let filter = CIFilter.gaussianBlur()
+        //        let filter2 = CIFilter(name: "CIColorControls")
+        //
+        //        print(filter.attributes) // print the attributes to see what they can do.
         
         originalImage = imageView.image
-
-	}
-
+        
+    }
+    
     private func presentImagePickerController() {
         guard UIImagePickerController.isSourceTypeAvailable(.photoLibrary) else {
             print("This is were the error should be presented to the user NSLOG or Alert")
             return
         }
-
+        
         let imagePicker = UIImagePickerController()
         imagePicker.sourceType = .photoLibrary
         imagePicker.delegate = self
@@ -69,7 +69,7 @@ class PhotoFilterViewController: UIViewController {
     }
     
     private func image(byFiltering inputImage: CIImage) -> UIImage? {
-//        let inputImage = CIImage(image: image)
+        //        let inputImage = CIImage(image: image)
         
         filter.inputImage = inputImage
         filter.saturation = saturationSlider.value
@@ -90,31 +90,55 @@ class PhotoFilterViewController: UIViewController {
             imageView.image = nil
         }
     }
-	
-	// MARK: Actions
-	
-	@IBAction func choosePhotoButtonPressed(_ sender: Any) {
+    
+    // MARK: Actions
+    
+    @IBAction func choosePhotoButtonPressed(_ sender: Any) {
         presentImagePickerController()
-	}
-	
-	@IBAction func savePhotoButtonPressed(_ sender: UIButton) {
-		// TODO: Save to photo library
-	}
-	
-
-	// MARK: Slider events
-	
-	@IBAction func brightnessChanged(_ sender: UISlider) {
+    }
+    
+    @IBAction func savePhotoButtonPressed(_ sender: UIButton) {
+        guard
+            let orginalImage = originalImage?.flattened,
+            let orginalCIImage = CIImage(image: orginalImage)
+        else { return }
+        
+        guard let processedImage = image(byFiltering: orginalCIImage) else { return }
+        
+        PHPhotoLibrary.shared().performChanges {
+            PHAssetChangeRequest.creationRequestForAsset(from: processedImage)
+        } completionHandler: { (sucess, error) in
+            if let error = error {
+                print("Error saving photo: \(error)")
+                return
+            }
+            
+            DispatchQueue.main.async {
+                self.presentSuccessfulSaveAlert()
+            }
+        }
+    }
+    
+    private func presentSuccessfulSaveAlert() {
+        let alert = UIAlertController(title: "Photo Saved!", message: "The photo has been saved to your Photo Library!", preferredStyle: .alert)
+        alert.addAction(UIAlertAction(title: "OK", style: .default, handler: nil))
+        present(alert, animated: true, completion: nil)
+    }
+    
+    
+    // MARK: Slider events
+    
+    @IBAction func brightnessChanged(_ sender: UISlider) {
         updateImage()
-	}
-	
-	@IBAction func contrastChanged(_ sender: Any) {
+    }
+    
+    @IBAction func contrastChanged(_ sender: Any) {
         updateImage()
-	}
-	
-	@IBAction func saturationChanged(_ sender: Any) {
+    }
+    
+    @IBAction func saturationChanged(_ sender: Any) {
         updateImage()
-	}
+    }
 }
 
 extension PhotoFilterViewController: UIImagePickerControllerDelegate, UINavigationControllerDelegate {
