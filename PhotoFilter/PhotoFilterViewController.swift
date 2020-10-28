@@ -12,6 +12,29 @@ class PhotoFilterViewController: UIViewController {
     
     var originalImage: UIImage? {
         didSet {
+            guard let orignialImage = originalImage else {
+                scaleImage = nil
+                return
+            }
+            
+            var scaledSize = imageView.bounds.size
+//            let scale = imageView.contentScaleFactor // UIScreen.main.scale
+            let scale: CGFloat = 0.5
+            
+            scaledSize.width *= scale
+            scaledSize.height *= scale
+            
+            guard let scaledUIImage = orignialImage.imageByScaling(toSize: scaledSize) else {
+                scaleImage = nil
+                return
+            }
+            
+            scaleImage = CIImage(image: scaledUIImage)
+        }
+    }
+    
+    var scaleImage: CIImage? {
+        didSet {
             updateImage()
         }
     }
@@ -45,24 +68,24 @@ class PhotoFilterViewController: UIViewController {
         
     }
     
-    private func image(byFiltering image: UIImage) -> UIImage {
-        let inputImage = CIImage(image: image)
+    private func image(byFiltering inputImage: CIImage) -> UIImage? {
+//        let inputImage = CIImage(image: image)
         
         filter.inputImage = inputImage
         filter.saturation = saturationSlider.value
         filter.brightness = brightnessSlider.value
         filter.contrast = contrastSlider.value
         
-        guard let outputimage = filter.outputImage else { return image }
+        guard let outputimage = filter.outputImage else { return nil }
         
-        guard let renderedCGImage = context.createCGImage(outputimage, from: outputimage.extent) else { return image}
+        guard let renderedCGImage = context.createCGImage(outputimage, from: outputimage.extent) else { return nil }
         
         return UIImage(cgImage: renderedCGImage)
     }
     
     private func updateImage() {
-        if let originalImage = originalImage {
-            imageView.image = originalImage
+        if let scaleImage = scaleImage {
+            imageView.image = image(byFiltering: scaleImage)
         } else {
             imageView.image = nil
         }
